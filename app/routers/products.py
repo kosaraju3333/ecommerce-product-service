@@ -64,7 +64,19 @@ def get_products(
     db: Session = Depends(get_db)
 ):
 
-    return db.query(Product).all()
+    return (
+        db.query(Product)
+        .filter(Product.is_active == True)
+        .all()
+    )
+
+
+# @router.get("/", response_model=list[ProductResponse])
+# def get_products(
+#     db: Session = Depends(get_db)
+# ):
+
+#     return db.query(Product).all()
 
 
 # ============================================================
@@ -167,16 +179,48 @@ def delete_product(
     )
 
     if not product:
-
         raise HTTPException(
             status_code=404,
             detail="Product not found"
         )
 
-    db.delete(product)
+    # Soft delete
+    product.is_active = False
+
     db.commit()
+    db.refresh(product)
 
     return {
         "message": "Product deleted successfully",
-        "product_id": product_id
+        "product_id": product.id
     }
+
+
+
+# @router.delete("/{product_id}")
+# def delete_product(
+#     product_id: int,
+#     db: Session = Depends(get_db),
+#     current_user: dict = Depends(require_admin)
+# ):
+
+#     product = (
+#         db.query(Product)
+#         .filter(Product.id == product_id)
+#         .first()
+#     )
+
+#     if not product:
+
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Product not found"
+#         )
+
+#     db.delete(product)
+#     db.commit()
+
+#     return {
+#         "message": "Product deleted successfully",
+#         "product_id": product_id
+#     }
