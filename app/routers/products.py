@@ -3,9 +3,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.product import Product
-from app.schemas.product import ProductCreate, ProductResponse
+# from app.schemas.product import ProductCreate, ProductResponse
 from app.utils.dependencies import require_admin
-
+from app.schemas.product import (
+    ProductCreate,
+    ProductResponse,
+    StockReduceRequest
+)
 
 router = APIRouter(
     prefix="/api/products",
@@ -195,6 +199,48 @@ def delete_product(
         "product_id": product.id
     }
 
+@router.put("/{product_id}/stock/reduce")
+def reduce_stock(
+    product_id: int,
+    request: StockReduceRequest,
+    db: Session = Depends(get_db)
+):
+
+    product = (
+        db.query(Product)
+        .filter(Product.id == product_id)
+        .first()
+    )
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    if not product.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Product is not available"
+        )
+
+    if product.stock_quantity < request.quantity:
+        raise HTTPException(
+            status_code=400,
+            detail="Insufficient stock"
+        )
+
+    product.stock_quantity -= request.quantity
+
+    db.commit()
+    db.refresh(product)
+
+    return {
+        "message": "Stock reduced successfully",
+        "product_id": product.id,
+        "quantity_reduced": request.quantity,
+        "remaining_stock": product.stock_quantity
+    }
 
 
 # @router.delete("/{product_id}")

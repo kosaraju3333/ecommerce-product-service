@@ -1,7 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, Field
 
 class ProductCreate(BaseModel):
     name: str
@@ -12,6 +11,9 @@ class ProductCreate(BaseModel):
     image_url: str | None = None
     rating: float = 0.0
     stock_quantity: int
+
+class StockReduceRequest(BaseModel):
+    quantity: int = Field(gt=0)
 
 
 class ProductResponse(BaseModel):
