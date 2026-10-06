@@ -242,31 +242,3 @@ def reduce_stock(
         "remaining_stock": product.stock_quantity
     }
 
-
-# @router.delete("/{product_id}")
-# def delete_product(
-#     product_id: int,
-#     db: Session = Depends(get_db),
-#     current_user: dict = Depends(require_admin)
-# ):
-
-#     product = (
-#         db.query(Product)
-#         .filter(Product.id == product_id)
-#         .first()
-#     )
-
-#     if not product:
-
-#         raise HTTPException(
-#             status_code=404,
-#             detail="Product not found"
-#         )
-
-#     db.delete(product)
-#     db.commit()
-
-#     return {
-#         "message": "Product deleted successfully",
-#         "product_id": product_id
-#     }
