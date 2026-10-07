@@ -40,6 +40,12 @@ jobs:
               \"chmod 600 /opt/ecommerce/product/product.env\",
               \"aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 828048069567.dkr.ecr.us-east-1.amazonaws.com\",
               \"docker pull 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product:${IMAGE_TAG}\",
+
+              \"echo '=== Running Product database migrations ==='\",
+              \"docker run --rm --env-file /opt/ecommerce/product/product.env 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product:${IMAGE_TAG} alembic upgrade head\",
+              \"echo '=== Product database migrations successful ==='\",
+
+
               \"docker stop ecommerce-product || true\",
               \"docker rm ecommerce-product || true\",
               \"docker run -d --name ecommerce-product --restart unless-stopped --env-file /opt/ecommerce/product/product.env -p 8002:8002 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product:${IMAGE_TAG}\",
