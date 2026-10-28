@@ -168,6 +168,8 @@ pipeline {
 
                     def IMAGE_URI = "${ECR_REGISTRY}/${env.ECR_REPOSITORY}:${IMAGE_TAG}"
 
+                    env.DEPLOY_IMAGE_URI = IMAGE_URI
+
                     echo "Building Docker Image: ${IMAGE_URI}"
 
                     sh """
