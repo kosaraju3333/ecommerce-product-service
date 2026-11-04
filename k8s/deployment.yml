@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce-product
+  namespace: ecommerce-product
+  labels:
+    app: ecommerce-product
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce-product
+  template:
+    metadata:
+      labels:
+        app: ecommerce-product
+    spec:
+      serviceAccountName: product-service-account
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        ### Prevents the container from starting as root
+        runAsNonRoot: true
+        ### Runs the process using your existing appuser UID
+        runAsUser: 999
+        ### Uses your existing appgroup GID
+        runAsGroup: 999
+
+      containers:
+        - name: ecommerce-product
+          image: 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product-prod:v1
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8002
+
+          securityContext:
+            ### Prevents processes from gaining additional privileges through mechanisms such as setuid
+            allowPrivilegeEscalation: false
+            ### Removes Linux capabilities that the application normally doesn't need
+            capabilities:
+              drop:
+                - ALL
+            ### Applies the container runtime's default system-call restrictions
+            seccompProfile:
+              type: RuntimeDefault
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: DATABASE_URL
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: SECRET_KEY
+
+            - name: ALGORITHM
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: ALGORITHM
+
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: FRONTEND_URL
+
+
+          volumeMounts:
+            - name: product-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+      topologySpreadConstraints:
+        # Spread product Pods across Availability Zones
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ecommerce-product
+
+        # Spread product Pods across worker nodes
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: ecommerce-product
+
+
+
+      volumes:
+        - name: product-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ecommerce-product-secrets

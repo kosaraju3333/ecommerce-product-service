@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ecommerce-product-migration-v1
+  namespace: ecommerce-product
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+
+  template:
+    spec:
+      serviceAccountName: product-service-account
+      restartPolicy: Never
+
+      containers:
+        - name: alembic-migration
+          image: 828048069567.dkr.ecr.us-east-1.amazonaws.com/ecommerce-product-prod:v1
+          imagePullPolicy: IfNotPresent
+
+          command: ["alembic", "upgrade", "head"]
+
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: DATABASE_URL
+
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: SECRET_KEY
+
+            - name: ALGORITHM
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: ALGORITHM
+
+            - name: FRONTEND_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-product-credentials
+                  key: FRONTEND_URL
+
+          volumeMounts:
+            - name: product-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+
+      volumes:
+        - name: product-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ecommerce-product-secrets
